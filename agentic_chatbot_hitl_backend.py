@@ -39,10 +39,16 @@ llm = ChatOpenAI(
 )
 
 
-# Embedding 模型（中文优化，本地运行，免费）
-# 构建时已预下载到镜像内，运行时走离线模式
+# Embedding 模型（构建时预下载，运行时离线用本地路径）
+import os as _os, glob as _glob
+_cache_base = "/app/.cache/huggingface"
+_hub_models = _glob.glob(f"{_cache_base}/**/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=True)
+if _hub_models:
+    _model_path = _hub_models[0]
+else:
+    _model_path = "BAAI/bge-small-zh-v1.5"  # fallback
 embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-small-zh-v1.5",
+    model_name=_model_path,
     model_kwargs={"device": "cpu"},
     encode_kwargs={"normalize_embeddings": True},
 )

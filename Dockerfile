@@ -19,8 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 构建时预下载 embedding 模型
 ENV HF_HOME=/app/.cache/huggingface
 RUN python -c "from sentence_transformers import SentenceTransformer; \
+    import os; \
     m = SentenceTransformer('BAAI/bge-small-zh-v1.5', cache_folder='/app/.cache/huggingface'); \
-    print('Model cached successfully')"
+    from huggingface_hub import snapshot_download; \
+    local_path = snapshot_download('BAAI/bge-small-zh-v1.5', cache_dir='/app/.cache/huggingface', local_files_only=False); \
+    print(f'MODEL_PATH={local_path}')"
 
 COPY . .
 
