@@ -25,4 +25,4 @@ ENV DEEPSEEK_API_KEY=""
 ENV TAVILY_API_KEY=""
 ENV OPENWEATHER_API_KEY=""
 
-CMD ["streamlit", "run", "app_hitl.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+CMD ["streamlit", "run", "app_hitl.py", "--server.port", "8501", "--server.address", "0.0.0.0", "--server.headless", "true", "--server.enableXsrfProtection", "false", "--server.enableWebsocketCompression", "false"]
