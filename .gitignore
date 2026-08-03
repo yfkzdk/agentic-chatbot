@@ -1,0 +1,18 @@
+# Environments
+.venv
+env/
+venv/
+ENV/
+.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Cache
+__pycache__
+*.pyc
+
+# FAISS
+faiss_db/
