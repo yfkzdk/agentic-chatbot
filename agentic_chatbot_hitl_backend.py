@@ -40,18 +40,11 @@ llm = ChatOpenAI(
 
 
 # Embedding 模型（中文优化，本地运行，免费）
-# 使用缓存目录避免每次重启都重新下载
-import shutil
-model_cache_dir = "/app/.cache/huggingface"
-os.makedirs(model_cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = model_cache_dir
-os.environ["TRANSFORMERS_CACHE"] = model_cache_dir
-
+# 构建时已预下载到镜像内，运行时走离线模式
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-zh-v1.5",
     model_kwargs={"device": "cpu"},
     encode_kwargs={"normalize_embeddings": True},
-    cache_folder=model_cache_dir,
 )
 
 
