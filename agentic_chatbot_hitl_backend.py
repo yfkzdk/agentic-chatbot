@@ -42,6 +42,8 @@ llm = ChatOpenAI(
 # Embedding 模型（中文优化，本地运行，免费，首次运行自动下载约100MB）
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-zh-v1.5",
+    model_kwargs={"device": "cpu"},
+    encode_kwargs={"normalize_embeddings": True},
 )
 
 
