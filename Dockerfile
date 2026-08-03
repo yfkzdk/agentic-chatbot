@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 构建时预下载 embedding 模型（不设离线标志，让它正常下载）
+# 构建时预下载 embedding 模型
 ENV HF_HOME=/app/.cache/huggingface
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     m = SentenceTransformer('BAAI/bge-small-zh-v1.5', cache_folder='/app/.cache/huggingface'); \
@@ -26,9 +26,11 @@ COPY . .
 
 EXPOSE 8501
 
-# API Keys — 部署时通过 -e 传入
+# API Keys — 部署时通过 Sealos 环境变量传入真实值
 ENV DEEPSEEK_API_KEY=""
 ENV TAVILY_API_KEY=""
 ENV OPENWEATHER_API_KEY=""
+ENV HF_HOME=/app/.cache/huggingface
+ENV HF_HUB_OFFLINE=1
 
 CMD ["streamlit", "run", "app_hitl.py", "--server.port", "8501", "--server.address", "0.0.0.0", "--server.headless", "true", "--server.enableXsrfProtection", "false", "--server.enableWebsocketCompression", "false"]
