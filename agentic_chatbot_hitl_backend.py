@@ -39,14 +39,14 @@ llm = ChatOpenAI(
 )
 
 
-# Embedding 模型（构建时预下载，运行时离线用本地路径）
+# Embedding 模型（构建时 pre-download，运行时直接用）
 import os as _os, glob as _glob
 _cache_base = "/app/.cache/huggingface"
-_hub_models = _glob.glob(f"{_cache_base}/**/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=True)
-if _hub_models:
-    _model_path = _hub_models[0]
-else:
-    _model_path = "BAAI/bge-small-zh-v1.5"  # fallback
+_found = _glob.glob(f"{_cache_base}/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=False)
+if not _found:
+    _found = _glob.glob(f"{_cache_base}/**/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=True)
+_model_path = _found[0] if _found else "BAAI/bge-small-zh-v1.5"
+print(f"[EMBEDDING] Using model at: {_model_path}")
 embeddings = HuggingFaceEmbeddings(
     model_name=_model_path,
     model_kwargs={"device": "cpu"},
