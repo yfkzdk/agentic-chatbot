@@ -1,6 +1,7 @@
 from agentic_chatbot_hitl_backend import (
     chatbot,
     get_all_threads,
+    get_pending_interrupt,
     ingest_rag_document
 )
 
@@ -67,61 +68,6 @@ def load_conversation(thread_id):
 
 
 # ========================= HITL 辅助函数 =========================
-
-def get_pending_interrupt(thread_id):
-    """
-    返回指定线程的第一个未处理的 LangGraph 中断。
-
-    Returns:
-        待处理的 Interrupt 对象，若无则返回 None。
-    """
-
-    config = {
-        "configurable": {
-            "thread_id": thread_id
-        }
-    }
-
-    try:
-
-        # 读取当前检查点状态
-        state_snapshot = chatbot.get_state(config)
-
-        # 部分 LangGraph 版本直接在 state 上暴露 interrupts
-        direct_interrupts = getattr(
-            state_snapshot,
-            "interrupts",
-            ()
-        ) or ()
-
-        if direct_interrupts:
-            return direct_interrupts[0]
-
-        # 其他 LangGraph 版本将 interrupts 存储在 tasks 内部
-        tasks = getattr(
-            state_snapshot,
-            "tasks",
-            ()
-        ) or ()
-
-        for task in tasks:
-
-            task_interrupts = getattr(
-                task,
-                "interrupts",
-                ()
-            ) or ()
-
-            if task_interrupts:
-                return task_interrupts[0]
-
-    except Exception:
-
-        # 新创建的线程可能还没有检查点
-        return None
-
-    return None
-
 
 def save_pending_interrupt(thread_id, interrupt_object):
     """

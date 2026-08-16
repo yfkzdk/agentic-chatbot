@@ -35,10 +35,14 @@ pip install -r requirements.txt
 ### 3. 启动
 
 ```bash
+# 方式一：Streamlit 前端（完整聊天界面）
 streamlit run app_hitl.py --server.port 8501
+
+# 方式二：FastAPI 服务（供其他应用调用，SSE 流式）
+uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
-访问 http://localhost:8501
+访问 http://localhost:8501（前端）或 http://localhost:8000/docs（API 文档）
 
 ### Docker 部署
 

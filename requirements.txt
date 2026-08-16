@@ -13,3 +13,6 @@ pypdf==6.13.2
 langchain-text-splitters==1.1.2
 langchain-huggingface==1.2.2
 sentence-transformers
+fastapi
+uvicorn
+python-multipart

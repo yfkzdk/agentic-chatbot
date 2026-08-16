@@ -28,6 +28,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
 COPY . .
 
 EXPOSE 8501
+EXPOSE 8000
 
 # API Keys — 部署时通过 Sealos 环境变量传入真实值
 ENV DEEPSEEK_API_KEY=""
