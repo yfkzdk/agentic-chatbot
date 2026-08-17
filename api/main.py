@@ -9,11 +9,27 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import chat, threads, ingest, health
+from backend.db import Base, engine
+from backend import db as models  # 确保模型注册到 Base.metadata
+from backend.settings import settings
+
+from .routers import auth, chat, threads, ingest, health
 
 app = FastAPI(title="聊天辅助机器人 API")
 
-origins = ["*"]
+
+# ========================= 启动事件 =========================
+
+@app.on_event("startup")
+def on_startup():
+    """启动时校验配置 + 建表。"""
+    settings.validate_required()
+    Base.metadata.create_all(bind=engine)
+
+
+# ========================= CORS =========================
+
+origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(threads.router)
 app.include_router(ingest.router)

@@ -1,12 +1,33 @@
+import os
+import glob
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_core.tools import tool
+from langchain_huggingface import HuggingFaceEmbeddings
 
-from .embeddings import embeddings
 
+# ========================= Embedding 模型 =========================
+# 构建时预下载到容器内，运行时直接用本地缓存
+
+_cache_base = "/app/.cache/huggingface"
+_found = glob.glob(f"{_cache_base}/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=False)
+if not _found:
+    _found = glob.glob(f"{_cache_base}/**/models--BAAI--bge-small-zh-v1.5/snapshots/*", recursive=True)
+_model_path = _found[0] if _found else "BAAI/bge-small-zh-v1.5"
+print(f"[EMBEDDING] Using model at: {_model_path}")
+
+embeddings = HuggingFaceEmbeddings(
+    model_name=_model_path,
+    model_kwargs={"device": "cpu"},
+    encode_kwargs={"normalize_embeddings": True},
+)
+
+
+# ========================= PDF 解析 & 索引 =========================
 
 def ingest_rag_document(file_path):
+    """解析 PDF → 分块 → 向量化 → 保存 FAISS 索引。"""
     DB_PATH = "faiss_db"
     loader = PyPDFLoader(file_path)
     docs = loader.load()
@@ -16,14 +37,16 @@ def ingest_rag_document(file_path):
     vector_store.save_local(DB_PATH)
 
 
+# ========================= 检索器 =========================
 
 def get_retriever():
+    """加载 FAISS 索引，返回相似度检索器（top-4）。"""
     DB_PATH = "faiss_db"
     vector_store = FAISS.load_local(
-            folder_path=DB_PATH,
-            embeddings=embeddings,
-            allow_dangerous_deserialization=True
-        )
+        folder_path=DB_PATH,
+        embeddings=embeddings,
+        allow_dangerous_deserialization=True
+    )
 
     retriever = vector_store.as_retriever(
         search_type="similarity",
@@ -31,40 +54,3 @@ def get_retriever():
     )
 
     return retriever
-
-
-
-
-# rag 工具
-
-@tool
-def rag_tool(query: str) -> str:
-    """
-    从 PDF 文档中检索相关信息。
-
-    当用户提出可能能够通过已存储的 PDF 文档回答的事实性
-    或概念性问题时，使用此工具。
-
-    参数：
-        query：用于检索 PDF 内容的问题或搜索查询。
-    """
-    retriever = get_retriever()
-    documents = retriever.invoke(query)
-
-    if not documents:
-        return "No relevant information was found in the PDF."
-
-    formatted_documents = []
-
-    for index, document in enumerate(documents, start=1):
-        source = document.metadata.get("source", "Unknown source")
-        page = document.metadata.get("page", "Unknown page")
-
-        formatted_documents.append(
-            f"Document {index}\n"
-            f"Source: {source}\n"
-            f"Page: {page}\n"
-            f"Content: {document.page_content}"
-        )
-
-    return "\n\n".join(formatted_documents)

@@ -1,14 +1,13 @@
 import os
 import math
 import requests
-from typing import Any
+from typing import Any, Annotated
 
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
-from langgraph.types import interrupt
+from langgraph.prebuilt import InjectedState
 
-from .rag import rag_tool
-
+from .rag import get_retriever
 
 # 工具
 
@@ -62,15 +61,16 @@ def get_stock_price(symbol: str) -> dict:
 
 
 @tool
-def purchase_stock(symbol: str, quantity: int) -> dict:
+def purchase_stock(symbol: str, quantity: int, state: Annotated[dict, InjectedState()]) -> dict:
     """
     模拟购买指定数量的某只股票。
 
-    人工介入（HUMAN-IN-THE-LOOP）：
-    在确认购买前，该工具会中断并等待人工决策（"yes" 或其它任何值）。
+    该工具需要人工审批（HITL）：
+    审批流程由图（backend/graph.py）的 human_approval 节点控制，
+    本工具只读取图注入到状态中的审批决策（yes/no）。
     """
-    # 这会暂停图的执行，并将控制权交还给调用方
-    decision = interrupt(f"Approve buying {quantity} shares of {symbol}? (yes/no)")
+    # 审批决策由图节点写入状态后注入
+    decision = state.get("pending_approval", {}).get("decision")
 
     if isinstance(decision, str) and decision.lower() == "yes":
         return {
@@ -211,6 +211,41 @@ def get_current_weather(location: str) -> str:
     except (KeyError, TypeError, ValueError) as error:
         return f"Unexpected weather API response: {error}"
 
+
+
+# rag 工具
+
+@tool
+def rag_tool(query: str) -> str:
+    """
+    从 PDF 文档中检索相关信息。
+
+    当用户提出可能能够通过已存储的 PDF 文档回答的事实性
+    或概念性问题时，使用此工具。
+
+    参数：
+        query：用于检索 PDF 内容的问题或搜索查询。
+    """
+    retriever = get_retriever()
+    documents = retriever.invoke(query)
+
+    if not documents:
+        return "No relevant information was found in the PDF."
+
+    formatted_documents = []
+
+    for index, document in enumerate(documents, start=1):
+        source = document.metadata.get("source", "Unknown source")
+        page = document.metadata.get("page", "Unknown page")
+
+        formatted_documents.append(
+            f"Document {index}\n"
+            f"Source: {source}\n"
+            f"Page: {page}\n"
+            f"Content: {document.page_content}"
+        )
+
+    return "\n\n".join(formatted_documents)
 
 
 # 汇总工具列表
