@@ -5,6 +5,7 @@ from typing import TypedDict, Annotated
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -227,20 +228,33 @@ def build_graph(checkpointer):
 
 # ========================= 检查点 & 图 =========================
 
-# 对话记忆持久化（SqliteSaver：写入数据库，重启/多进程不丢）
-# checkpoint 与 ORM 共用同一个配置源（settings.database_url），
-# 未来切换 PostgreSQL 时一处改、两处生效。
-def _checkpoint_db_path() -> str:
-    """从 settings.database_url 提取 SQLite 文件路径。"""
+# 对话记忆持久化：根据配置自动选 SQLite 或 PostgreSQL checkpointer
+# checkpoint 与 ORM 共用同一个配置源（settings.database_url）。
+def _build_checkpointer():
+    """按 database_url 类型创建对应的 LangGraph checkpointer。"""
     url = _settings.database_url
-    if url.startswith("sqlite:///"):
-        return url[len("sqlite:///"):]
-    # 非 SQLite（如 PostgreSQL）时暂回退本地文件；后续接 PG checkpointer 时替换
-    return "chatbot.db"
+
+    if url.startswith("sqlite"):
+        # SQLite：模块级长连接
+        path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else "chatbot.db"
+        conn = sqlite3.connect(path, check_same_thread=False)
+        saver = SqliteSaver(conn)
+        return saver
+
+    # PostgreSQL：用 psycopg3 建立长连接（进程存活期间保持打开）
+    import psycopg
+    from psycopg.rows import dict_row
+
+    conn = psycopg.connect(
+        url,
+        autocommit=True,
+        prepare_threshold=0,
+        row_factory=dict_row,
+    )
+    return PostgresSaver(conn)
 
 
-_checkpoint_conn = sqlite3.connect(_checkpoint_db_path(), check_same_thread=False)
-checkpoint = SqliteSaver(_checkpoint_conn)
+checkpoint = _build_checkpointer()
 checkpoint.setup()
 
 chatbot = build_graph(checkpointer=checkpoint)

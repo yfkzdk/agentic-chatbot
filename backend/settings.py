@@ -4,8 +4,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """应用配置：从 .env 读取，缺失必填项在启动期直接报错。"""
 
-    # 数据库（SQLite 文件路径，未来可切换为 PostgreSQL 连接串）
-    database_url: str = "sqlite:///chatbot.db"
+    # 数据库（默认 PostgreSQL；如需本地 SQLite 可改为 sqlite:///chatbot.db）
+    database_url: str = "postgresql://postgres:yfk520715123@127.0.0.1:5432/chatbot"
 
     # JWT
     secret_key: str = ""
